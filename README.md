@@ -1,7 +1,7 @@
 <!-- badges: start -->
   [![R-CMD-check](https://github.com/simgeecnr/advR_lab4/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/simgeecnr/advR_lab4/actions/workflows/R-CMD-check.yaml)
   <!-- badges: end -->
-# advR_lab4 R Package
+# Bonus Lab
 
 This R package contains our own implementation of a Linear Regression model using  linear algebra and ordinary least squares approach. It calculates various statistics such as t-values, p-values, regression coefficients, resiudual variance and more.
 
