@@ -1,5 +1,5 @@
 <!-- badges: start -->
-  [![R-CMD-check](https://github.com/hugo-morvan/bonus_lab/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/hugo-morvan/bonus_lab/actions/workflows/R-CMD-check.yaml)
+  [![R-CMD-check](https://github.com/hugo-morvan/bonus_lab/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/hugo-morvan/bonus_lab/blob/main/.github/workflows/R-CMD-check.yaml)
   <!-- badges: end -->
 
 # Bonus Lab
