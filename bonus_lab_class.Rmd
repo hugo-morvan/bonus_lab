@@ -1,0 +1,241 @@
+---
+title: "bonus lab"
+author: "Simge Çınar"
+date: "2023-10-27"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(MASS)
+library(nycflights13)
+library(dplyr)
+library(ggplot2)
+library(mlbench)
+library(caret)
+```
+
+```{r}
+ridgereg <- setRefClass('ridgereg',
+  fields = list(formula = 'formula',
+                data = 'data.frame',
+                lambda = 'numeric', 
+                x_matrix = 'matrix',
+                normalized_x_matrix = 'matrix',
+                y_matrix = 'matrix',
+                beta_ridge = 'matrix',
+                prediction = 'matrix', 
+                data_name = 'character'),
+  methods = list(
+    initialize = function(formula, data, lambda){
+      formula <<- formula
+      data <<- data
+      lambda <<- lambda
+      
+      # Convert data frame to matrix
+      x_matrix <<- model.matrix(formula, data)
+      means <- colMeans(x_matrix)
+      sds <- apply(x_matrix, 2, sd)
+      new <- (t(x_matrix[, -1])-means[-1])/sds[-1]
+      normalized <- t(new)
+      normalized_x_matrix <<- cbind(x_matrix[, 1], normalized)
+      
+      y_data <- data.frame(data[, (all.vars(formula)[1])])
+      y_matrix <<- as.matrix(y_data)
+      colnames(y_matrix) <<- all.vars(formula)[1]
+      
+      # Find the beta
+      I <- diag(ncol(normalized_x_matrix))
+      I[1,1] <- 0
+      parant <- (t(normalized_x_matrix) %*% normalized_x_matrix) + (lambda * I)
+      
+      beta <- solve(parant) %*% t(normalized_x_matrix) %*% y_matrix
+      scaled_beta <- t(beta)[-1] / sds[-1] # scale the terms except for intercept
+      intercept <- mean(y_matrix) - sum(scaled_beta * colMeans(x_matrix[,-1])) #find the intercept
+      beta_ridge <<- cbind(intercept, as.matrix(t(scaled_beta)))
+      colnames(beta_ridge)[1] <<- ""
+      rownames(beta_ridge) <<- ""
+      # Find the predictions
+      prediction <<- x_matrix %*% t(beta_ridge)
+      
+      data_name <<-  deparse(substitute(data))
+    },
+    predict = function(){
+      return(prediction)
+    },
+    coef = function(){
+      return(beta_ridge)
+    },
+    show = function(){
+      cat("\nCall:\n")
+      cat("ridgereg(formula = ", deparse(formula), ", data = ", data_name, ", lambda = ", lambda, ")\n", sep = "")
+      cat("\nCoefficients:\n")
+      print.default(ridgereg_model$coef())
+    }
+    
+  ))
+
+ridgereg_model <- ridgereg$new(Petal.Length~Species, iris, 0.001)
+ridgereg_model$beta_ridge
+ridgereg_model$prediction[1:10]
+print.default(ridgereg_model)
+```
+
+```{r}
+# Prediction function works
+data("Boston")
+formula <- medv~indus + nox
+data <- Boston
+lambda <- 0.001
+
+ridgereg_model <- ridgereg$new(formula, data, lambda)
+cat("Prediction:\n")
+ridgereg_model$predict()[1:10]
+
+cat("Actual:\n")
+ridge_model <- lm.ridge(formula, data = data, lambda = lambda)
+x_matrix <- model.matrix(formula, data)
+true_pred <- x_matrix %*% coef(ridge_model)
+true_pred[1:10]
+```
+```{r}
+# coef function works
+data("Boston")
+formula <- medv~indus + nox
+data <- Boston
+lambda <- 0.001
+
+ridgereg_model <- ridgereg$new(formula, data, lambda)
+cat("Coefficients:\n")
+ridgereg_model$coef()
+
+cat("Actual:\n")
+ridge_model <- lm.ridge(formula, data = data, lambda = lambda)
+coef(ridge_model)
+```
+```{r}
+#print function works
+print.default(ridgereg_model)
+```
+
+```{r}
+# Part 1.1.5
+visualize_airport_delays <- function() {
+  data("flights")
+  data("airports")
+  # Calculate the mean delay for each unique airport
+  airport_delays <- flights %>%
+    group_by(dest) %>%
+    summarize(mean_delay = mean(dep_delay, na.rm = TRUE))
+
+  # Filter out airports that are not in both datasets
+  airport_delays <- airport_delays %>%
+    filter(dest %in% airports$faa)
+
+  # Add latitude (lat) and longitude (lon) to the airport_delays dataset
+  airport_delays <- airport_delays %>%
+    left_join(airports, by = c("dest" = "faa")) %>%
+    select(dest, lon, lat, mean_delay)
+
+  # Create a scatterplot of mean delay by longitude and latitude
+  ggplot(airport_delays, aes(x = lon, y = lat, size = mean_delay)) +
+    geom_point(aes(color = mean_delay)) +
+    scale_size_continuous(range = c(3, 10)) +
+    labs(
+      title = "Mean Flight Delay by Airport Location",
+      x = "Longitude",
+      y = "Latitude",
+      size = "Mean Delay",
+      color = "Mean Delay"
+    ) +
+    theme_minimal()
+}
+
+# Call the function to visualize the airport delays
+visualize_airport_delays()
+```
+
+
+```{r}
+set.seed(123)
+
+# Create a 70-30 train-test split
+splitIndex <- createDataPartition(BostonHousing$medv, p = 0.7, list = FALSE)
+
+training_data <- BostonHousing[splitIndex, ]
+test_data <- BostonHousing[-splitIndex, ]
+```
+
+```{r}
+#API DATA
+driver_API <- function(year){
+  #This function gets the raw data from the driverStandings API for a specific year and returns a list
+  api_reponse <- paste0("http://ergast.com/api/f1/", year, "/driverStandings.json?limit=1000")
+  raw_data <- jsonlite::fromJSON(api_reponse)
+  return(raw_data) #returns a list
+}
+
+driver_get_df <- function(year){
+  # This function fetches the information from the driver_API() function and converts it into a data.frame
+  # Returns the F1 statistics for a single year
+  raw_data <- driver_API(year)
+  reponse_data <- as.data.frame(raw_data$MRData)
+  result <- as.data.frame(reponse_data$StandingsTable.StandingsLists.DriverStandings)
+  driver <- result$Driver
+  constr_list <- result$Constructors
+  for (i in 1:length(constr_list)){
+    if(nrow(constr_list[[i]])){
+      df <- as.data.frame(constr_list[i])
+      merged_name <- paste(df$name, collapse = '/')
+      merged_nationality <- paste(df$nationality, collapse = '/')
+      df['name'] <- merged_name
+      df['nationality'] <- merged_nationality
+      constr_list[[i]] <- df[1,]
+    }
+  }
+  constructer <- dplyr::bind_rows(constr_list)
+  
+  result_new <- subset(result, select = -c(Driver, Constructors, positionText))
+  
+  #Retrieve necessary data from constructor dataframe
+  constructer_keeps <- c("name", "nationality")
+  constructer_new <- constructer[constructer_keeps]
+  colnames(constructer_new)[colnames(constructer_new) == "name"] <- "constructer"
+  colnames(constructer_new)[colnames(constructer_new) == "nationality"] <- "constructer nationality"
+  
+  #Retrieve necessary data from driver dataframe
+  driver_keeps <- c("givenName","familyName", "nationality")
+  driver_new <- driver[driver_keeps]
+  driver_new$driver <- paste0(driver$givenName, " ", driver$familyName)
+  driver_new <- subset(driver_new, select = -c(givenName, familyName))
+  colnames(driver_new)[colnames(driver_new) == "nationality"] <- "driver nationality"
+  
+  final <- cbind(result_new, constructer_new, driver_new)
+  final$year <- year
+  final <- final[, c("year","position", "points", "wins", "driver", "driver nationality", "constructer","constructer nationality")]
+  #Return a data.frame
+  return(final)
+}
+
+driver_btw_years <- function(from,to){
+  # This function creates and return a data.frame for the driverStandings API for the years between 'from' and 'to'
+  df <- driver_get_df(from)
+  for (x in (from+1):to) {
+    new_year <- driver_get_df(x)
+    df <- rbind(df, new_year )
+  }
+  return(df)
+}
+```
+
+
+```{r}
+driver_btw_years(2000,2012)
+```
+
+
+
+
+
+
+
