@@ -1,11 +1,11 @@
-Package: advRlab04
+Package: bonus_lab
 Type: Package
-Title: Advanced R Lab 4
+Title: Bonus Lab
 Version: 1.0
-Date: 2023-09-22
+Date: 2023-10-27
 Author: Simge Cinar, Hugo Morvan
 Maintainer: Simge Cinar <simci637@student.liu.se>, Hugo Morvan <hugmo418@student.liu.se>
-Description: This package contains an implementation of a Linear Regression class for the purpose of fulfilling Lab 4 in Advanced R class.
+Description: This package contains an implementation of a Linear Regression class for the purpose of fulfilling the Bonus Lab in Advanced R class.
 License: GPL | file LICENSE
 Suggests: 
     knitr,
